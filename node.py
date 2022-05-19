@@ -3,7 +3,6 @@
 # node.py
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
 
 import sys
 import socket
@@ -20,6 +19,7 @@ class Node:
 
     # initialize listener socket
     def __init__(self, host=socket.gethostbyname(socket.gethostname()), port=8089):
+        logging.basicConfig(level=logging.DEBUG)
         logging.info('initializing %s:%s' % (host, port))
 
         self._peers = set()
@@ -47,7 +47,6 @@ class Node:
     def handleIncoming(self):
         while True:
             self._handleIncoming()
-            self._logger.debug('peers %s' % str(self._peers))
 
     def _handleIncoming(self):
         connection, address = self._serverSocket.accept()
@@ -74,7 +73,7 @@ class Node:
     def connect(self, host, port):
         self._logger.info('connecting to %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
-        self._logger.info('sending buffer: %s' % buffer)
+        self._logger.debug('sending buffer: %s' % buffer)
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
@@ -84,7 +83,7 @@ class Node:
     def disconnect(self, host, port):
         self._logger.info('disconnecting from %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
-        self._logger.info('sending buffer: %s' % buffer)
+        self._logger.debug('sending buffer: %s' % buffer)
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
