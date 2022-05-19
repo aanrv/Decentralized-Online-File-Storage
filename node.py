@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 import socket
+from threading import Thread
 from enum import Enum
 
 class MessageType(Enum):
@@ -22,6 +23,10 @@ class Node:
         self._serverSocket.bind((host, port))
         self._serverSocket.listen(3)
 
+        # start server thread
+        self._serverThread = Thread(target=self.handleIncoming)
+        self._serverThread.start()
+
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
         self._logger.info('initialized')
 
@@ -30,6 +35,10 @@ class Node:
         self._serverSocket.close()
 
     def handleIncoming(self):
+        while True:
+            self._handleIncoming()
+
+    def _handleIncoming(self):
         connection, address = self._serverSocket.accept()
         self._logger.info('accepted %s' % str(address))
         buf = connection.recv(2)
