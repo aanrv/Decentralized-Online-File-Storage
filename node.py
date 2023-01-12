@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # node.py
 
 import logging
@@ -9,11 +7,9 @@ import socket
 from threading import Thread
 from enum import Enum
 
-class MessageType(Enum):
-    CONNECT = 1
-    DISCONNECT = 2
-
 class Node:
+
+    MessageType = Enum('MessageType', ['CONNECT', 'DISCONNECT'])
 
     DELIM = '\1'
 
@@ -33,8 +29,8 @@ class Node:
         self._serverThread.start()
 
         self._handlers = {
-                MessageType.CONNECT     : self._handleConnect,
-                MessageType.DISCONNECT  : self._handleDisconnect,
+                Node.MessageType.CONNECT     : self._handleConnect,
+                Node.MessageType.DISCONNECT  : self._handleDisconnect,
         }
 
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
@@ -53,15 +49,15 @@ class Node:
         self._logger.info('accepted %s' % str(address))
         buffer = connection.recv(1024).decode()
         self._logger.info('received buffer: %s' % buffer)
-        incomingMessageType = MessageType(int(buffer.split(Node.DELIM)[0]))
-        self._handlers[incomingMessageType](buffer)
+        incomingMessageType = Node.MessageType(int(buffer.split(Node.DELIM)[0]))
+        self._handlers[incomingMessageType](buffer, connection)
 
-    def _handleConnect(self, buffer):
+    def _handleConnect(self, buffer, _):
         _, address, port = buffer.split(Node.DELIM)[0:3]
         self._peers.add((address, port))
         self._logger.info('received connect from %s:%s' % (address, port))
 
-    def _handleDisconnect(self, buffer):
+    def _handleDisconnect(self, buffer, _):
         _, address, port = buffer.split(Node.DELIM)[0:3]
         self._peers.remove((address, port))
         self._logger.info('recieved disconnect from %s:%s' % (address, port))
@@ -72,7 +68,7 @@ class Node:
     # connect to a single node i.e. request host:port node adds self to its peer list
     def connect(self, host, port):
         self._logger.info('connecting to %s:%s' % (host, port))
-        buffer = Node.DELIM.join(map(str, (MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
+        buffer = Node.DELIM.join(map(str, (Node.MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientsocket.connect((host, port))
@@ -83,7 +79,7 @@ class Node:
     # connect to a single node i.e. request host:port node adds self to its peer list
     def disconnect(self, host, port):
         self._logger.info('disconnecting from %s:%s' % (host, port))
-        buffer = Node.DELIM.join(map(str, (MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
+        buffer = Node.DELIM.join(map(str, (Node.MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientsocket.connect((host, port))
