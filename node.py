@@ -9,7 +9,7 @@ from enum import Enum
 
 class Node:
 
-    MessageType = Enum('MessageType', ['CONNECT', 'DISCONNECT'])
+    MessageType = Enum('MessageType', ['CONNECT', 'DISCONNECT', 'PEERS_REQUEST'])
 
     DELIM = '\1'
 
@@ -29,8 +29,9 @@ class Node:
         self._serverThread.start()
 
         self._handlers = {
-                Node.MessageType.CONNECT     : self._handleConnect,
-                Node.MessageType.DISCONNECT  : self._handleDisconnect,
+                Node.MessageType.CONNECT        : self._handleConnect,
+                Node.MessageType.DISCONNECT     : self._handleDisconnect,
+                Node.MessageType.PEERS_REQUEST  : self._handlePeersRequest,
         }
 
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
@@ -64,12 +65,17 @@ class Node:
         self._peers.remove((host, port))
         self._logger.info('recieved disconnect from %s:%s' % (host, port))
 
+    def _handlePeersRequest(self, _, connection):
+        buffer = repr(self._peers) + Node.DELIM
+        connection.send(buffer.encode())
+
     #TODO use getaddrinfo
     #TODO use hton etc to save bytes
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def connect(self, host, port):
         self._logger.info('connecting to %s:%s' % (host, port))
+        # TODO consider not using .value
         buffer = Node.DELIM.join(map(str, (Node.MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,4 +94,20 @@ class Node:
         clientsocket.send(buffer.encode())
         clientsocket.close()
         self._peers.remove((host, port))
+
+    # TODO consider len based messages over delim based
+    def peersRequest(self, host, port):
+        self._logger.info('requesting peers from %s:%s' % (host, port))
+        buffer = str(Node.MessageType.PEERS_REQUEST.value) + Node.DELIM
+        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientsocket.connect((host, port))
+        clientsocket.send(buffer.encode())
+        recvbuffer = ''
+        # TODO consider len based messages over delim based, searching str each time not efficient
+        while Node.DELIM not in recvbuffer:
+            recvbuffer += clientsocket.recv(4096).decode()
+            self._logger.debug('received %s, len %s' % (recvbuffer, len(recvbuffer)))
+        clientsocket.close()
+        peerlist = eval(recvbuffer.split(Node.DELIM)[0])
+        return peerlist
 
