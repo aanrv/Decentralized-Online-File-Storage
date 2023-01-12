@@ -75,6 +75,8 @@ class Node:
     # TODO use hton etc to save bytes
 
     def joinNetwork(self, host, port):
+        if ((host, port) == self._thisPeer):
+            raise Exception('attempted to contact self host')
         self._logger.info('joining network through %s:%s' % (host, port))
         unvisitedpeers = {(host, port)}
         while len(unvisitedpeers):
@@ -94,6 +96,8 @@ class Node:
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendConnect(self, host, port):
+        if ((host, port) == self._thisPeer):
+            raise Exception('attempted to contact self host')
         self._logger.info('connecting to %s:%s' % (host, port))
         # TODO consider not using .value
         buffer = Node.DELIM.join(map(str, (Node.MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
@@ -106,6 +110,8 @@ class Node:
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendDisconnect(self, host, port):
+        if ((host, port) == self._thisPeer):
+            raise Exception('attempted to contact self host')
         self._logger.info('disconnecting from %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (Node.MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
@@ -117,6 +123,8 @@ class Node:
 
     # TODO consider len based messages over delim based
     def sendPeersRequest(self, host, port):
+        if ((host, port) == self._thisPeer):
+            raise Exception('attempted to contact self host')
         self._logger.info('requesting peers from %s:%s' % (host, port))
         buffer = str(Node.MessageType.PEERS_REQUEST.value) + Node.DELIM
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
