@@ -15,7 +15,7 @@ class Node:
 
     # initialize listener socket
     def __init__(self, host=socket.gethostbyname(socket.gethostname()), port=8089):
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(levelname)8s :: %(name)s :: %(filename)s:%(lineno)-3s :: %(funcName)-20s() :: %(message)s')
         logging.info('initializing %s:%s' % (host, port))
 
         self._peers = set()
@@ -23,6 +23,7 @@ class Node:
         self._serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverSocket.bind((host, port))
         self._serverSocket.listen(3)
+        self._thisPeer = (host, port)
 
         # start server thread
         self._serverThread = Thread(target=self.handleIncoming)
@@ -72,6 +73,24 @@ class Node:
 
     # TODO use getaddrinfo
     # TODO use hton etc to save bytes
+
+    def joinNetwork(self, host, port):
+        self._logger.info('joining network through %s:%s' % (host, port))
+        unvisitedpeers = {(host, port)}
+        while len(unvisitedpeers):
+            iterationPeers = set()  # other peers discovered from peer list of unvisited nodes
+            for newhost, newport in unvisitedpeers:
+                # TODO set timeout
+                try:
+                    self.sendConnect(newhost, newport)
+                    newpeers = self.sendPeersRequest(newhost, newport)
+                except:
+                    self._logger.info('failed to connect or get peers from %s:%s' % (newhost, newport))
+                    pass
+                else:
+                    iterationPeers.update(newpeers)
+            unvisitedpeers.clear()
+            unvisitedpeers.update(iterationPeers - self._peers - {self._thisPeer})
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendConnect(self, host, port):
