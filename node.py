@@ -9,7 +9,11 @@ from enum import Enum
 
 class Node:
 
-    MessageType = Enum('MessageType', ['CONNECT', 'DISCONNECT', 'PEERS_REQUEST'])
+    MessageType = Enum('MessageType', [
+        'CONNECT',
+        'DISCONNECT',
+        'PEERS_REQUEST'
+    ])
 
     DELIM = '\1'
 
@@ -30,9 +34,9 @@ class Node:
         self._serverThread.start()
 
         self._handlers = {
-                Node.MessageType.CONNECT        : self._handleConnect,
-                Node.MessageType.DISCONNECT     : self._handleDisconnect,
-                Node.MessageType.PEERS_REQUEST  : self._handlePeersRequest,
+            Node.MessageType.CONNECT        : self._handleConnect,
+            Node.MessageType.DISCONNECT     : self._handleDisconnect,
+            Node.MessageType.PEERS_REQUEST  : self._handlePeersRequest,
         }
 
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
@@ -78,21 +82,21 @@ class Node:
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('joining network through %s:%s' % (host, port))
-        unvisitedpeers = {(host, port)}
-        while len(unvisitedpeers):
+        unvisitedPeers = {(host, port)}
+        while len(unvisitedPeers):
             iterationPeers = set()  # other peers discovered from peer list of unvisited nodes
-            for newhost, newport in unvisitedpeers:
+            for newHost, newPort in unvisitedPeers:
                 # TODO set timeout
                 try:
-                    self.sendConnect(newhost, newport)
-                    newpeers = self.sendPeersRequest(newhost, newport)
+                    self.sendConnect(newHost, newPort)
+                    newPeers = self.sendPeersRequest(newHost, newPort)
                 except:
-                    self._logger.info('failed to connect or get peers from %s:%s' % (newhost, newport))
+                    self._logger.info('failed to connect or get peers from %s:%s' % (newHost, newPort))
                     pass
                 else:
-                    iterationPeers.update(newpeers)
-            unvisitedpeers.clear()
-            unvisitedpeers.update(iterationPeers - self._peers - {self._thisPeer})
+                    iterationPeers.update(newPeers)
+            unvisitedPeers.clear()
+            unvisitedPeers.update(iterationPeers - self._peers - {self._thisPeer})
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendConnect(self, host, port):
@@ -102,10 +106,10 @@ class Node:
         # TODO consider not using .value
         buffer = Node.DELIM.join(map(str, (Node.MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
-        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientsocket.connect((host, port))
-        clientsocket.send(buffer.encode())
-        clientsocket.close()
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
+        clientSocket.send(buffer.encode())
+        clientSocket.close()
         self._peers.add((host, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
@@ -115,10 +119,10 @@ class Node:
         self._logger.info('disconnecting from %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (Node.MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
-        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientsocket.connect((host, port))
-        clientsocket.send(buffer.encode())
-        clientsocket.close()
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
+        clientSocket.send(buffer.encode())
+        clientSocket.close()
         self._peers.remove((host, port))
 
     # TODO consider len based messages over delim based
@@ -127,15 +131,15 @@ class Node:
             raise Exception('attempted to contact self host')
         self._logger.info('requesting peers from %s:%s' % (host, port))
         buffer = str(Node.MessageType.PEERS_REQUEST.value) + Node.DELIM
-        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientsocket.connect((host, port))
-        clientsocket.send(buffer.encode())
-        recvbuffer = ''
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
+        clientSocket.send(buffer.encode())
+        recvBuffer = ''
         # TODO consider len based messages over delim based, searching str each time not efficient
-        while Node.DELIM not in recvbuffer:
-            recvbuffer += clientsocket.recv(4096).decode()
-            self._logger.debug('received %s, len %s' % (recvbuffer, len(recvbuffer)))
-        clientsocket.close()
-        peerlist = eval(recvbuffer.split(Node.DELIM)[0])
-        return peerlist
+        while Node.DELIM not in recvBuffer:
+            recvBuffer += clientSocket.recv(4096).decode()
+            self._logger.debug('received %s, len %s' % (recvBuffer, len(recvBuffer)))
+        clientSocket.close()
+        peerList = eval(recvBuffer.split(Node.DELIM)[0])
+        return peerList
 
