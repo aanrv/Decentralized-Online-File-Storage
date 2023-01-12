@@ -78,6 +78,7 @@ class Node:
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
         clientsocket.close()
+        self._peers.add((address, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def disconnect(self, host, port):
@@ -88,4 +89,5 @@ class Node:
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
         clientsocket.close()
+        self._peers.remove((address, port))
 
