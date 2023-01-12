@@ -52,6 +52,7 @@ class Node:
         self._logger.info('received buffer: %s' % buffer)
         incomingMessageType = Node.MessageType(int(buffer.split(Node.DELIM)[0]))
         self._handlers[incomingMessageType](buffer, connection)
+        connection.close()
 
     def _handleConnect(self, buffer, _):
         host = buffer.split(Node.DELIM)[1]
@@ -69,11 +70,11 @@ class Node:
         buffer = repr(self._peers) + Node.DELIM
         connection.send(buffer.encode())
 
-    #TODO use getaddrinfo
-    #TODO use hton etc to save bytes
+    # TODO use getaddrinfo
+    # TODO use hton etc to save bytes
 
     # connect to a single node i.e. request host:port node adds self to its peer list
-    def connect(self, host, port):
+    def sendConnect(self, host, port):
         self._logger.info('connecting to %s:%s' % (host, port))
         # TODO consider not using .value
         buffer = Node.DELIM.join(map(str, (Node.MessageType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
@@ -85,7 +86,7 @@ class Node:
         self._peers.add((host, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
-    def disconnect(self, host, port):
+    def sendDisconnect(self, host, port):
         self._logger.info('disconnecting from %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (Node.MessageType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
@@ -96,7 +97,7 @@ class Node:
         self._peers.remove((host, port))
 
     # TODO consider len based messages over delim based
-    def peersRequest(self, host, port):
+    def sendPeersRequest(self, host, port):
         self._logger.info('requesting peers from %s:%s' % (host, port))
         buffer = str(Node.MessageType.PEERS_REQUEST.value) + Node.DELIM
         clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
