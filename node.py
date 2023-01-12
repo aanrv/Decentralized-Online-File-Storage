@@ -47,20 +47,22 @@ class Node:
     def _handleIncoming(self):
         connection, address = self._serverSocket.accept()
         self._logger.info('accepted %s' % str(address))
-        buffer = connection.recv(1024).decode()
+        buffer = connection.recv(4096).decode()
         self._logger.info('received buffer: %s' % buffer)
         incomingMessageType = Node.MessageType(int(buffer.split(Node.DELIM)[0]))
         self._handlers[incomingMessageType](buffer, connection)
 
     def _handleConnect(self, buffer, _):
-        _, address, port = buffer.split(Node.DELIM)[0:3]
-        self._peers.add((address, port))
-        self._logger.info('received connect from %s:%s' % (address, port))
+        host = buffer.split(Node.DELIM)[1]
+        port = int(buffer.split(Node.DELIM)[2])
+        self._peers.add((host, port))
+        self._logger.info('received connect from %s:%s' % (host, port))
 
     def _handleDisconnect(self, buffer, _):
-        _, address, port = buffer.split(Node.DELIM)[0:3]
-        self._peers.remove((address, port))
-        self._logger.info('recieved disconnect from %s:%s' % (address, port))
+        host = buffer.split(Node.DELIM)[1]
+        port = int(buffer.split(Node.DELIM)[2])
+        self._peers.remove((host, port))
+        self._logger.info('recieved disconnect from %s:%s' % (host, port))
 
     #TODO use getaddrinfo
     #TODO use hton etc to save bytes
@@ -74,7 +76,7 @@ class Node:
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
         clientsocket.close()
-        self._peers.add((address, port))
+        self._peers.add((host, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def disconnect(self, host, port):
@@ -85,5 +87,5 @@ class Node:
         clientsocket.connect((host, port))
         clientsocket.send(buffer.encode())
         clientsocket.close()
-        self._peers.remove((address, port))
+        self._peers.remove((host, port))
 
