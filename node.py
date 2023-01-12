@@ -46,35 +46,6 @@ class Node:
         self._logger.info('closing')
         self._serverSocket.close()
 
-    def handleIncoming(self):
-        while True:
-            self._handleIncoming()
-
-    def _handleIncoming(self):
-        connection, address = self._serverSocket.accept()
-        self._logger.info('accepted %s' % str(address))
-        buffer = connection.recv(4096).decode()
-        self._logger.info('received buffer: %s' % buffer)
-        incomingMessageType = Node.MessageType(int(buffer.split(Node.DELIM)[0]))
-        self._handlers[incomingMessageType](buffer, connection)
-        connection.close()
-
-    def _handleConnect(self, buffer, _):
-        host = buffer.split(Node.DELIM)[1]
-        port = int(buffer.split(Node.DELIM)[2])
-        self._peers.add((host, port))
-        self._logger.info('received connect from %s:%s' % (host, port))
-
-    def _handleDisconnect(self, buffer, _):
-        host = buffer.split(Node.DELIM)[1]
-        port = int(buffer.split(Node.DELIM)[2])
-        self._peers.remove((host, port))
-        self._logger.info('recieved disconnect from %s:%s' % (host, port))
-
-    def _handlePeersRequest(self, _, connection):
-        buffer = repr(self._peers) + Node.DELIM
-        connection.send(buffer.encode())
-
     # TODO use getaddrinfo
     # TODO use hton etc to save bytes
 
@@ -142,4 +113,33 @@ class Node:
         clientSocket.close()
         peerList = eval(recvBuffer.split(Node.DELIM)[0])
         return peerList
+
+    def handleIncoming(self):
+        while True:
+            self._handleIncoming()
+
+    def _handleIncoming(self):
+        connection, address = self._serverSocket.accept()
+        self._logger.info('accepted %s' % str(address))
+        buffer = connection.recv(4096).decode()
+        self._logger.info('received buffer: %s' % buffer)
+        incomingMessageType = Node.MessageType(int(buffer.split(Node.DELIM)[0]))
+        self._handlers[incomingMessageType](buffer, connection)
+        connection.close()
+
+    def _handleConnect(self, buffer, _):
+        host = buffer.split(Node.DELIM)[1]
+        port = int(buffer.split(Node.DELIM)[2])
+        self._peers.add((host, port))
+        self._logger.info('received connect from %s:%s' % (host, port))
+
+    def _handleDisconnect(self, buffer, _):
+        host = buffer.split(Node.DELIM)[1]
+        port = int(buffer.split(Node.DELIM)[2])
+        self._peers.remove((host, port))
+        self._logger.info('recieved disconnect from %s:%s' % (host, port))
+
+    def _handlePeersRequest(self, _, connection):
+        buffer = repr(self._peers) + Node.DELIM
+        connection.send(buffer.encode())
 
