@@ -17,12 +17,14 @@ class Node:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(levelname)8s :: %(name)s :: %(filename)s:%(lineno)-3s :: %(funcName)-20s() :: %(message)s')
         logging.info('initializing %s:%s' % (host, port))
 
+        self._thisPeer = (host, port)
         self._peers = set()
 
         self._serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverSocket.bind((host, port))
         self._serverSocket.listen(3)
-        self._thisPeer = (host, port)
+        self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
+        self._logger.info('initialized socket')
 
         # start server thread
         self._handleIncomingContinue = True
@@ -36,11 +38,7 @@ class Node:
             RequestType.GET_PEERS  : self._handleGetPeers,
         }
 
-        self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
-        self._logger.info('initialized')
-
     def __del__(self):
-        self._logger.info('closing')
         self.shutdown()
 
     # TODO use getaddrinfo
@@ -52,7 +50,7 @@ class Node:
             self._logger.info('already shutdown, nothing to do')
             return
         self._handleIncomingContinue = False
-        sleep(5)
+        sleep(1)
         try:
             self.sendPing(*self._thisPeer)  # a hack to move the loop forward in case no other nodes are connecting
         except:
