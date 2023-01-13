@@ -1,19 +1,13 @@
 # node.py
 
-import logging
-
+from common import RequestType
 import sys
 import socket
+import logging
 from threading import Thread
 from enum import Enum
 
 class Node:
-
-    RequestType = Enum('RequestType', [
-        'CONNECT',
-        'DISCONNECT',
-        'PEERS_LIST',
-    ])
 
     DELIM = '\1'
 
@@ -34,9 +28,9 @@ class Node:
         self._serverThread.start()
 
         self._handlers = {
-            Node.RequestType.CONNECT    : self._handleConnect,
-            Node.RequestType.DISCONNECT : self._handleDisconnect,
-            Node.RequestType.PEERS_LIST  : self._handlePeersList,
+            RequestType.CONNECT    : self._handleConnect,
+            RequestType.DISCONNECT : self._handleDisconnect,
+            RequestType.PEERS_LIST  : self._handlePeersList,
         }
 
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
@@ -75,7 +69,7 @@ class Node:
             raise Exception('attempted to contact self host')
         self._logger.info('connecting to %s:%s' % (host, port))
         # TODO consider not using .value
-        buffer = Node.DELIM.join(map(str, (Node.RequestType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
+        buffer = Node.DELIM.join(map(str, (RequestType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -88,7 +82,7 @@ class Node:
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('disconnecting from %s:%s' % (host, port))
-        buffer = Node.DELIM.join(map(str, (Node.RequestType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
+        buffer = Node.DELIM.join(map(str, (RequestType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -101,7 +95,7 @@ class Node:
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('requesting peers from %s:%s' % (host, port))
-        buffer = str(Node.RequestType.PEERS_REQUEST.value) + Node.DELIM
+        buffer = str(RequestType.PEERS_REQUEST.value) + Node.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
@@ -123,7 +117,7 @@ class Node:
         self._logger.info('accepted %s' % str(address))
         buffer = connection.recv(4096).decode()
         self._logger.info('received buffer: %s' % buffer)
-        incomingRequestType = Node.RequestType(int(buffer.split(Node.DELIM)[0]))
+        incomingRequestType = RequestType(int(buffer.split(Node.DELIM)[0]))
         self._handlers[incomingRequestType](buffer, connection)
         connection.close()
 
