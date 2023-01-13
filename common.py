@@ -3,6 +3,7 @@
 from enum import Enum
 
 RequestType = Enum('RequestType', [
+    'PING',
     'CONNECT',
     'DISCONNECT',
     'GET_PEERS',

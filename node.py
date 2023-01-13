@@ -3,6 +3,7 @@
 from common import RequestType
 import sys
 import socket
+from time import sleep
 import logging
 from threading import Thread
 from enum import Enum
@@ -24,10 +25,12 @@ class Node:
         self._thisPeer = (host, port)
 
         # start server thread
+        self._handleIncomingContinue = True
         self._serverThread = Thread(target=self.handleIncoming)
         self._serverThread.start()
 
         self._handlers = {
+            RequestType.PING       : self._handlePing,
             RequestType.CONNECT    : self._handleConnect,
             RequestType.DISCONNECT : self._handleDisconnect,
             RequestType.GET_PEERS  : self._handleGetPeers,
@@ -38,10 +41,25 @@ class Node:
 
     def __del__(self):
         self._logger.info('closing')
-        self._serverSocket.close()
+        self.shutdown()
 
     # TODO use getaddrinfo
     # TODO use hton etc to save bytes
+
+    def shutdown(self):
+        self._logger.info('shutting down node')
+        if not self._handleIncomingContinue:
+            self._logger.info('already shutdown, nothing to do')
+            return
+        self._handleIncomingContinue = False
+        sleep(5)
+        try:
+            self.sendPing(*self._thisPeer)  # a hack to move the loop forward in case no other nodes are connecting
+        except:
+            pass
+        self._serverThread.join()
+        self._serverSocket.close()
+        self._logger.info('shutdown complete')
 
     def joinNetwork(self, host, port):
         if ((host, port) == self._thisPeer):
@@ -62,6 +80,13 @@ class Node:
                     iterationPeers.update(newPeers)
             unvisitedPeers.clear()
             unvisitedPeers.update(iterationPeers - self._peers - {self._thisPeer})
+
+    def sendPing(self, host, port):
+        buffer = str(RequestType.PING.value) + Node.DELIM
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
+        clientSocket.send(buffer.encode())
+        clientSocket.close()
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendConnect(self, host, port):
@@ -112,12 +137,17 @@ class Node:
         return peerList
 
     def handleIncoming(self):
-        while True:
+        while self._handleIncomingContinue:
             self._handleIncoming()
+
+    def _handlePing(self, *_):
+        self._logger.info('received ping')
 
     def _handleIncoming(self):
         connection, address = self._serverSocket.accept()
         self._logger.info('accepted %s' % str(address))
+        # TODO create thread per connection
+        # TODO make messages more robust and consistent e.g. sizes to expect etc
         buffer = connection.recv(4096).decode()
         self._logger.debug('received buffer: %s' % buffer)
         incomingRequestType = RequestType(int(buffer.split(Node.DELIM)[0]))
