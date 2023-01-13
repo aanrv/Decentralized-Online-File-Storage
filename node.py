@@ -116,8 +116,9 @@ class Node:
         connection, address = self._serverSocket.accept()
         self._logger.info('accepted %s' % str(address))
         buffer = connection.recv(4096).decode()
-        self._logger.info('received buffer: %s' % buffer)
+        self._logger.debug('received buffer: %s' % buffer)
         incomingRequestType = RequestType(int(buffer.split(Node.DELIM)[0]))
+        self._logger.info('received incoming request %s' % incomingRequestType)
         self._handlers[incomingRequestType](buffer, connection)
         connection.close()
 
