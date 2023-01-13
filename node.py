@@ -88,7 +88,10 @@ class Node:
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         clientSocket.close()
-        self._peers.remove((host, port))
+        try:
+            self._peers.remove((host, port))
+        except KeyError:
+            self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
 
     # TODO consider len based messages over delim based
     def sendGetPeers(self, host, port):
@@ -131,7 +134,10 @@ class Node:
     def _handleDisconnect(self, buffer, _):
         host = buffer.split(Node.DELIM)[1]
         port = int(buffer.split(Node.DELIM)[2])
-        self._peers.remove((host, port))
+        try:
+            self._peers.remove((host, port))
+        except KeyError:
+            self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
         self._logger.info('recieved disconnect from %s:%s' % (host, port))
 
     def _handleGetPeers(self, _, connection):
