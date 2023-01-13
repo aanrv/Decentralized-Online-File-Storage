@@ -79,6 +79,11 @@ class Node:
             unvisitedPeers.clear()
             unvisitedPeers.update(iterationPeers - self._peers - {self._thisPeer})
 
+    def leaveNetwork(self):
+        self._logger.info('leaving network')
+        for targetNode in list(self._peers):
+            self.sendDisconnect(*targetNode)
+
     def sendPing(self, host, port):
         buffer = str(RequestType.PING.value) + Node.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
