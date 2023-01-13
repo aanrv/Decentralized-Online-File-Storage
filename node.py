@@ -30,7 +30,7 @@ class Node:
         self._handlers = {
             RequestType.CONNECT    : self._handleConnect,
             RequestType.DISCONNECT : self._handleDisconnect,
-            RequestType.PEERS_LIST  : self._handlePeersList,
+            RequestType.GET_PEERS  : self._handleGetPeers,
         }
 
         self._logger = logging.getLogger('%s' % str(self._serverSocket.getsockname()))
@@ -54,7 +54,7 @@ class Node:
                 # TODO set timeout
                 try:
                     self.sendConnect(newHost, newPort)
-                    newPeers = self.sendPeersRequest(newHost, newPort)
+                    newPeers = self.sendGetPeers(newHost, newPort)
                 except:
                     self._logger.info('failed to connect or get peers from %s:%s' % (newHost, newPort))
                     pass
@@ -91,11 +91,11 @@ class Node:
         self._peers.remove((host, port))
 
     # TODO consider len based messages over delim based
-    def sendPeersRequest(self, host, port):
+    def sendGetPeers(self, host, port):
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('requesting peers from %s:%s' % (host, port))
-        buffer = str(RequestType.PEERS_REQUEST.value) + Node.DELIM
+        buffer = str(RequestType.GET_PEERS.value) + Node.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
@@ -133,7 +133,7 @@ class Node:
         self._peers.remove((host, port))
         self._logger.info('recieved disconnect from %s:%s' % (host, port))
 
-    def _handlePeersList(self, _, connection):
+    def _handleGetPeers(self, _, connection):
         buffer = repr(self._peers) + Node.DELIM
         connection.send(buffer.encode())
 

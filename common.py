@@ -5,7 +5,7 @@ from enum import Enum
 RequestType = Enum('RequestType', [
     'CONNECT',
     'DISCONNECT',
-    'PEERS_LIST',
+    'GET_PEERS',
     'DATA_ADD',
     'DATA_GET',
     'DATA_REMOVE',
