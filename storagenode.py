@@ -24,13 +24,25 @@ class StorageNode(Node):
             self._logger.info('creating dir %s' % self._dataDir)
             os.makedirs(self._dataDir)
 
-    def sendDataAdd(self, host, port, data):
-        # TODO remove and handle large files
+    def sendDataAdd(self, host, port, data='', filename=''):
         self._logger.info('sending data add to %s:%s' % (host, port))
-        buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data)))
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
-        clientSocket.send(buffer.encode())
+        if data:
+            buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data)))
+            clientSocket.send(buffer.encode())
+        else:
+            dataSize = os.path.getsize(filename)
+            buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, dataSize))) + StorageNode.DELIM
+            bytesRemaining = dataSize
+            clientSocket.send(buffer.encode())
+            with open(filename, 'r') as f:
+                while bytesRemaining:
+                    print('bytes remaining %s' % bytesRemaining)
+                    assert(bytesRemaining > 0)
+                    data = f.read(4096)
+                    clientSocket.send(data.encode())
+                    bytesRemaining -= len(data)
         clientSocket.close()
 
     def sendDataGet(self, host, port, datahash):
