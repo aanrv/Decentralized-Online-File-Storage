@@ -27,7 +27,7 @@ class StorageNode(Node):
     def sendDataAdd(self, host, port, data):
         # TODO remove and handle large files
         self._logger.info('sending data add to %s:%s' % (host, port))
-        buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data))) + StorageNode.DELIM
+        buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data)))
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
@@ -64,13 +64,28 @@ class StorageNode(Node):
         buffer = buffer.decode()
         # TODO reads entire data into memory, not feasible for very large files, handle
         # TODO handle binary files
-        while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_ADD])):
+        # recv until can get dataSize
+        while (buffer.count(Node.DELIM) <= Fields[RequestType.DATA_ADD].SIZE.value):
             buffer += connection.recv(4096).decode()
         dataSize = int(buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].SIZE.value])
-        data = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].DATA.value][:dataSize]
-        filename = hashlib.sha256(data.encode()).hexdigest()
-        with open(os.path.join(self._dataDir, filename), 'w') as f:
-            f.write(data)
+        # get data currently in buffer
+        data = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].DATA.value]
+        # write to temporary file
+        tmp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+        totalBytesWritten = 0
+        totalBytesWritten += tmp.write(data)
+        # datahash will be output filename
+        datahash = hashlib.sha256()
+        datahash.update(data.encode())
+        # while dataSize bytes not written, keep recv'ing and writing
+        while (totalBytesWritten < dataSize):
+            data = connection.recv(4096).decode()
+            totalBytesWritten += tmp.write(data)
+            datahash.update(data.encode())
+        assert(totalBytesWritten == dataSize)
+        outfilename = os.path.join(self._dataDir, datahash.hexdigest())
+        os.rename(tmp.name, outfilename)
+        tmp.close()
 
     def _handleDataGet(self, buffer, connection):
         buffer = buffer.decode()
