@@ -38,7 +38,6 @@ class StorageNode(Node):
             clientSocket.send(buffer.encode())
             with open(filename, 'r') as f:
                 while bytesRemaining:
-                    print('bytes remaining %s' % bytesRemaining)
                     assert(bytesRemaining > 0)
                     data = f.read(4096)
                     clientSocket.send(data.encode())
@@ -104,10 +103,17 @@ class StorageNode(Node):
         while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_GET])):
             buffer += connection.recv(4096).decode()
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
-        with open(os.path.join(self._dataDir, filename), 'r') as f:
-            data = f.read()
-        buffer = StorageNode.DELIM.join([str(len(data)), data]) # no ending delim needed since size field is provided
-        connection.send(buffer.encode())
+        fullfile = os.path.join(self._dataDir, filename)
+        bytesRemaining = os.path.getsize(fullfile)
+        outbuffer = str(bytesRemaining) + StorageNode.DELIM
+        connection.send(outbuffer.encode())
+        with open(fullfile, 'r') as f:
+            while bytesRemaining:
+                data = f.read(4096)
+                connection.send(data.encode())
+                bytesRemaining -= len(data)
+                assert(bytesRemaining >= 0)
+            assert(bytesRemaining == 0)
 
     def _handleDataRemove(self, buffer, connection):
         buffer = buffer.decode()
