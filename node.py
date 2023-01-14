@@ -1,6 +1,6 @@
 # node.py
 
-from common import *    # RequestType, RequestTypeIndex, *RequestFields
+from common import *    # RequestType, Fields, RequestTypeIndex
 import sys
 import socket
 from time import sleep
@@ -162,15 +162,15 @@ class Node:
 
     def _handleConnect(self, buffer, _):
         buffer = buffer.decode()
-        host = buffer.split(Node.DELIM)[ConnectRequestFields.HOST.value]
-        port = int(buffer.split(Node.DELIM)[ConnectRequestFields.PORT.value])
+        host = buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].HOST.value]
+        port = int(buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].PORT.value])
         self._peers.add((host, port))
         self._logger.info('received connect from %s:%s' % (host, port))
 
     def _handleDisconnect(self, buffer, _):
         buffer = buffer.decode()
-        host = buffer.split(Node.DELIM)[DisconnectRequestFields.HOST.value]
-        port = int(buffer.split(Node.DELIM)[DisconnectRequestFields.PORT.value])
+        host = buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].HOST.value]
+        port = int(buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].PORT.value])
         try:
             self._peers.remove((host, port))
         except KeyError:

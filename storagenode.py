@@ -1,6 +1,6 @@
 # storagenode.py
 
-from common import *    # RequestType and *RequestFields types
+from common import *    # RequestType, Fields, RequestFields
 from node import Node
 import os
 import socket
@@ -55,15 +55,15 @@ class StorageNode(Node):
 
     def _handleDataAdd(self, buffer, _):
         buffer = buffer.decode()
-        dataSize = int(buffer.split(StorageNode.DELIM)[DataAddRequestFields.SIZE.value])
-        data = buffer.split(StorageNode.DELIM)[DataAddRequestFields.DATA.value][:dataSize]
+        dataSize = int(buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].SIZE.value])
+        data = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].DATA.value][:dataSize]
         filename = hashlib.sha256(data.encode()).hexdigest()
         with open(os.path.join(self._dataDir, filename), 'w') as f:
             f.write(data)
 
     def _handleDataGet(self, buffer, connection):
         buffer = buffer.decode()
-        filename = buffer.split(StorageNode.DELIM)[DataGetRequestFields.HASH.value]
+        filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         with open(os.path.join(self._dataDir, filename), 'r') as f:
             data = f.read()
         buffer = data + StorageNode.DELIM
@@ -71,6 +71,6 @@ class StorageNode(Node):
 
     def _handleDataRemove(self, buffer, _):
         buffer = buffer.decode()
-        filename = buffer.split(StorageNode.DELIM)[DataRemoveRequestFields.HASH.value]
+        filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_REMOVE].HASH.value]
         os.remove(os.path.join(self._dataDir, filename))
 

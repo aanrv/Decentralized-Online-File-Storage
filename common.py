@@ -13,31 +13,19 @@ RequestType = Enum('RequestType', [
     'DATA_REMOVE',  # request remote host to remove data with the provided hash from its storage directory
 ])
 
+Fields = {
+        RequestType.PING        : Enum('PingFields',        ['TYPE'],                   start=0),
+        RequestType.CONNECT     : Enum('ConnectFields',     ['TYPE', 'HOST', 'PORT'],   start=0),
+        RequestType.DISCONNECT  : Enum('DisconnectFields',  ['TYPE', 'HOST', 'PORT'],   start=0),
+        RequestType.GET_PEERS   : Enum('GetPeersFields',    ['TYPE'],                   start=0),
+        RequestType.DATA_ADD    : Enum('DataAddFields',     ['TYPE', 'SIZE', 'DATA'],   start=0),
+        RequestType.DATA_GET    : Enum('DataGetFields',     ['TYPE', 'HASH'],           start=0),
+        RequestType.DATA_REMOVE : Enum('DataRemoveFields',  ['TYPE', 'HASH'],           start=0),
+}
+
 # request message field indices when split by delim
 # starts with 1 because 0 is always the message type
 
 RequestTypeIndex = 0
 
-ConnectRequestFields = Enum('ConnectFields', [
-    'HOST',
-    'PORT',
-])
-
-DisconnectRequestFields = Enum('DisconnectFields', [
-    'HOST',
-    'PORT',
-])
-
-DataAddRequestFields = Enum('DataAddFields', [
-    'SIZE',
-    'DATA',
-])
-
-DataGetRequestFields = Enum('DataGetFields', [
-    'HASH',
-])
-
-DataRemoveRequestFields = Enum('DataRemoveFields', [
-    'HASH',
-])
 
