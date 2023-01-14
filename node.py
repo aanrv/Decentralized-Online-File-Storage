@@ -41,9 +41,6 @@ class Node:
     def __del__(self):
         self.shutdown()
 
-    # TODO use getaddrinfo
-    # TODO use hton etc to save bytes
-
     def shutdown(self):
         self._logger.info('shutting down node')
         if not self._handleIncomingContinue:
@@ -96,7 +93,6 @@ class Node:
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('connecting to %s:%s' % (host, port))
-        # TODO consider not using .value
         buffer = Node.DELIM.join(map(str, (RequestType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
         self._logger.debug('sending buffer: %s' % buffer)
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -122,7 +118,6 @@ class Node:
         except KeyError:
             self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
 
-    # TODO consider len based messages over delim based
     def sendGetPeers(self, host, port):
         if ((host, port) == self._thisPeer):
             raise Exception('attempted to contact self host')
@@ -132,7 +127,6 @@ class Node:
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         recvBuffer = ''
-        # TODO consider len based messages over delim based, searching str each time not efficient
         while Node.DELIM not in recvBuffer:
             recvBuffer += clientSocket.recv(4096).decode()
             self._logger.debug('received %s, len %s' % (recvBuffer, len(recvBuffer)))
@@ -151,7 +145,6 @@ class Node:
         connection, address = self._serverSocket.accept()
         self._logger.info('accepted %s' % str(address))
         # TODO create thread per connection
-        # TODO make messages more robust and consistent e.g. sizes to expect etc
         buffer = connection.recv(4096)
         self._logger.info('received buffer')
         headbuffer = buffer[:len(str(len(RequestType))) + 1].decode()   # to decode only portion needed for determining message type

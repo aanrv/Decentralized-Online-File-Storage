@@ -73,9 +73,7 @@ class StorageNode(Node):
 
     def _handleDataAdd(self, buffer, connection):
         buffer = buffer.decode()
-        # TODO reads entire data into memory, not feasible for very large files, handle
         # TODO handle binary files
-        # recv until can get dataSize
         while (buffer.count(Node.DELIM) <= Fields[RequestType.DATA_ADD].SIZE.value):
             buffer += connection.recv(4096).decode()
         dataSize = int(buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].SIZE.value])
