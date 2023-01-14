@@ -20,9 +20,7 @@ class StorageNode(Node):
         })
 
         self._dataDir = os.path.expandvars(dataDir)
-        if not os.path.exists(self._dataDir):
-            self._logger.info('creating dir %s' % self._dataDir)
-            os.makedirs(self._dataDir)
+        os.makedirs(self._dataDir, exist_ok=True)
 
     def sendDataAdd(self, host, port, data='', filename=''):
         self._logger.info('sending data add to %s:%s' % (host, port))
@@ -44,7 +42,10 @@ class StorageNode(Node):
                     bytesRemaining -= len(data)
         clientSocket.close()
 
-    def sendDataGet(self, host, port, datahash):
+    def sendDataGet(self, host, port, datahash, targetfile=None):
+        if not targetfile:
+            targetfile=os.path.join(self._dataDir, datahash)
+        targetfile = os.path.expandvars(targetfile)
         self._logger.info('requesting data from %s:%s (%s)' % (host, port, datahash))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_GET.value, datahash))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,11 +58,17 @@ class StorageNode(Node):
             recvBuffer += clientSocket.recv(4096).decode()
         dataSize = int(recvBuffer.split(Node.DELIM)[0])
         data = recvBuffer.split(StorageNode.DELIM)[1]
+        tmp = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+        totalBytesWritten = 0
+        totalBytesWritten += tmp.write(data)
         # keep reading until dataSize bytes are read
-        while (len(data) < dataSize):
-            data += clientSocket.recv(4096).decode()
+        while (totalBytesWritten < dataSize):
+            data = clientSocket.recv(4096).decode()
+            totalBytesWritten += tmp.write(data)
+        assert(totalBytesWritten == dataSize)
+        os.rename(tmp.name, targetfile)
+        tmp.close()
         clientSocket.close()
-        return data
 
     def sendDataRemove(self, host, port, datahash):
         self._logger.info('sending data remove to %s:%s (%s)' % (host, port, datahash))

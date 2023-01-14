@@ -7,6 +7,7 @@ import os
 
 def main():
     storagedir = '$PWD/data/'
+    testfile = 'filetest/test.txt'
     a = StorageNode(storagedir)
     b = StorageNode(storagedir, port=8090)
     c = StorageNode(storagedir, port=8091)
@@ -54,7 +55,7 @@ def main():
     assert(d._peers == {a._thisPeer, b._thisPeer, c._thisPeer})
     assert(e._peers == {a._thisPeer, c._thisPeer})
     sleep(1)
-    with open('test/payload.txt', 'r') as f:
+    with open(testfile,'r') as f:
         datastr = f.read()
     filename = hashlib.sha256(datastr.encode()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(storagedir, filename))
@@ -62,16 +63,16 @@ def main():
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(datastr == open(fullfile, 'r').read())
-    recvdata = a.sendDataGet('127.0.1.1', 8091, filename)
-    assert(recvdata == datastr)
+    a.sendDataGet('127.0.1.1', 8091, filename, targetfile=fullfile+'.recv')
+    assert(open(fullfile+'.recv').read() == datastr)
     a.sendDataRemove('127.0.1.1', 8091, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
 
-    a.sendDataAdd('127.0.1.1', 8092, filename='test/payload.txt')
+    a.sendDataAdd('127.0.1.1', 8092, filename=testfile)
     sleep(1)
     assert(os.path.isfile(fullfile))
-    assert(open('test/payload.txt', 'r').read() == open(fullfile, 'r').read())
+    assert(open(testfile, 'r').read() == open(fullfile, 'r').read())
     a.sendDataRemove('127.0.1.1', 8091, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
