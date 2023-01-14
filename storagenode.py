@@ -53,8 +53,11 @@ class StorageNode(Node):
         clientSocket.send(buffer.encode())
         clientSocket.close()
 
-    def _handleDataAdd(self, buffer, _):
+    def _handleDataAdd(self, buffer, connection):
         buffer = buffer.decode()
+        # TODO reads entire data into memory, not feasible for very large files, handle
+        while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_ADD])):
+            buffer += connection.recv(4096).decode()
         dataSize = int(buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].SIZE.value])
         data = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].DATA.value][:dataSize]
         filename = hashlib.sha256(data.encode()).hexdigest()
@@ -63,14 +66,18 @@ class StorageNode(Node):
 
     def _handleDataGet(self, buffer, connection):
         buffer = buffer.decode()
+        while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_GET])):
+            buffer += connection.recv(4096).decode()
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         with open(os.path.join(self._dataDir, filename), 'r') as f:
             data = f.read()
         buffer = data + StorageNode.DELIM
         connection.send(buffer.encode())
 
-    def _handleDataRemove(self, buffer, _):
+    def _handleDataRemove(self, buffer, connection):
         buffer = buffer.decode()
+        while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_REMOVE])):
+            buffer += connection.recv(4096).decode()
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_REMOVE].HASH.value]
         os.remove(os.path.join(self._dataDir, filename))
 

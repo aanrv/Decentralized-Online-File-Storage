@@ -160,15 +160,19 @@ class Node:
         self._handlers[incomingRequestType](buffer, connection)
         connection.close()
 
-    def _handleConnect(self, buffer, _):
+    def _handleConnect(self, buffer, connection):
         buffer = buffer.decode()
+        while (buffer.count(Node.DELIM) != len(Fields[RequestType.CONNECT])):
+            buffer += connection.recv(4096).decode()
         host = buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].HOST.value]
         port = int(buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].PORT.value])
         self._peers.add((host, port))
         self._logger.info('received connect from %s:%s' % (host, port))
 
-    def _handleDisconnect(self, buffer, _):
+    def _handleDisconnect(self, buffer, connection):
         buffer = buffer.decode()
+        while (buffer.count(Node.DELIM) != len(Fields[RequestType.DISCONNECT])):
+            buffer += connection.recv(4096).decode()
         host = buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].HOST.value]
         port = int(buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].PORT.value])
         try:
