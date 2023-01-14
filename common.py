@@ -16,6 +16,8 @@ RequestType = Enum('RequestType', [
 # request message field indices when split by delim
 # starts with 1 because 0 is always the message type
 
+RequestTypeIndex = 0
+
 ConnectRequestFields = Enum('ConnectFields', [
     'HOST',
     'PORT',

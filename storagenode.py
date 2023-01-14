@@ -55,7 +55,8 @@ class StorageNode(Node):
 
     def _handleDataAdd(self, buffer, _):
         buffer = buffer.decode()
-        _, dataSize, data = buffer.split(StorageNode.DELIM)[:-1]
+        dataSize = int(buffer.split(StorageNode.DELIM)[DataAddRequestFields.SIZE.value])
+        data = buffer.split(StorageNode.DELIM)[DataAddRequestFields.DATA.value][:dataSize]
         filename = hashlib.sha256(data.encode()).hexdigest()
         with open(os.path.join(self._dataDir, filename), 'w') as f:
             f.write(data)

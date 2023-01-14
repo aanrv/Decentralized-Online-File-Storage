@@ -1,6 +1,6 @@
 # node.py
 
-from common import RequestType
+from common import *    # RequestType, RequestTypeIndex, *RequestFields
 import sys
 import socket
 from time import sleep
@@ -155,22 +155,22 @@ class Node:
         buffer = connection.recv(4096)
         self._logger.info('received buffer')
         headbuffer = buffer[:len(str(len(RequestType))) + 1].decode()   # to decode only portion needed for determining message type
-        incomingRequestType = RequestType(int(headbuffer.split(Node.DELIM)[0]))
+        incomingRequestType = RequestType(int(headbuffer.split(Node.DELIM)[RequestTypeIndex]))
         self._logger.info('received incoming request %s' % incomingRequestType)
         self._handlers[incomingRequestType](buffer, connection)
         connection.close()
 
     def _handleConnect(self, buffer, _):
         buffer = buffer.decode()
-        host = buffer.split(Node.DELIM)[1]
-        port = int(buffer.split(Node.DELIM)[2])
+        host = buffer.split(Node.DELIM)[ConnectRequestFields.HOST.value]
+        port = int(buffer.split(Node.DELIM)[ConnectRequestFields.PORT.value])
         self._peers.add((host, port))
         self._logger.info('received connect from %s:%s' % (host, port))
 
     def _handleDisconnect(self, buffer, _):
         buffer = buffer.decode()
-        host = buffer.split(Node.DELIM)[1]
-        port = int(buffer.split(Node.DELIM)[2])
+        host = buffer.split(Node.DELIM)[DisconnectRequestFields.HOST.value]
+        port = int(buffer.split(Node.DELIM)[DisconnectRequestFields.PORT.value])
         try:
             self._peers.remove((host, port))
         except KeyError:
