@@ -14,7 +14,7 @@ class Node:
 
     # initialize listener socket
     def __init__(self, host=socket.gethostbyname(socket.gethostname()), port=8089):
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(levelname)8s :: %(name)s :: %(filename)s:%(lineno)-3s :: %(funcName)-20s() :: %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(levelname)8s :: %(name)s :: %(filename)14s:%(lineno)-3s :: %(funcName)-20s() :: %(message)s')
         logging.info('initializing %s:%s' % (host, port))
 
         self._thisPeer = (host, port)
@@ -103,6 +103,7 @@ class Node:
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         clientSocket.close()
+        # TODO mutex for self._peers
         self._peers.add((host, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
@@ -151,20 +152,23 @@ class Node:
         self._logger.info('accepted %s' % str(address))
         # TODO create thread per connection
         # TODO make messages more robust and consistent e.g. sizes to expect etc
-        buffer = connection.recv(4096).decode()
-        self._logger.debug('received buffer: %s' % buffer)
-        incomingRequestType = RequestType(int(buffer.split(Node.DELIM)[0]))
+        buffer = connection.recv(4096)
+        self._logger.info('received buffer')
+        headbuffer = buffer[:len(str(len(RequestType))) + 1].decode()   # to decode only portion needed for determining message type
+        incomingRequestType = RequestType(int(headbuffer.split(Node.DELIM)[0]))
         self._logger.info('received incoming request %s' % incomingRequestType)
         self._handlers[incomingRequestType](buffer, connection)
         connection.close()
 
     def _handleConnect(self, buffer, _):
+        buffer = buffer.decode()
         host = buffer.split(Node.DELIM)[1]
         port = int(buffer.split(Node.DELIM)[2])
         self._peers.add((host, port))
         self._logger.info('received connect from %s:%s' % (host, port))
 
     def _handleDisconnect(self, buffer, _):
+        buffer = buffer.decode()
         host = buffer.split(Node.DELIM)[1]
         port = int(buffer.split(Node.DELIM)[2])
         try:

@@ -26,6 +26,7 @@ class StorageNode(Node):
     def sendDataAdd(self, host, port, data):
         # TODO remove and handle large files
         assert(len(data) < 4000)
+        self._logger.info('sending data add to %s:%s' % (host, port))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -33,6 +34,7 @@ class StorageNode(Node):
         clientSocket.close()
 
     def sendDataGet(self, host, port, datahash):
+        self._logger.info('requesting data from %s:%s (%s)' % (host, port, datahash))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_GET.value, datahash))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -44,6 +46,7 @@ class StorageNode(Node):
         return data
 
     def sendDataRemove(self, host, port, datahash):
+        self._logger.info('sending data remove to %s:%s (%s)' % (host, port, datahash))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_REMOVE.value, datahash))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -51,12 +54,14 @@ class StorageNode(Node):
         clientSocket.close()
 
     def _handleDataAdd(self, buffer, _):
+        buffer = buffer.decode()
         _, dataSize, data = buffer.split(StorageNode.DELIM)[:-1]
         filename = hashlib.sha256(data.encode()).hexdigest()
         with open(os.path.join(self._dataDir, filename), 'w') as f:
             f.write(data)
 
     def _handleDataGet(self, buffer, connection):
+        buffer = buffer.decode()
         filename = buffer.split(StorageNode.DELIM)[DataGetRequestFields.HASH.value]
         with open(os.path.join(self._dataDir, filename), 'r') as f:
             data = f.read()
@@ -64,6 +69,7 @@ class StorageNode(Node):
         connection.send(buffer.encode())
 
     def _handleDataRemove(self, buffer, _):
+        buffer = buffer.decode()
         filename = buffer.split(StorageNode.DELIM)[DataRemoveRequestFields.HASH.value]
         os.remove(os.path.join(self._dataDir, filename))
 
