@@ -54,7 +54,8 @@ def main():
     assert(d._peers == {a._thisPeer, b._thisPeer, c._thisPeer})
     assert(e._peers == {a._thisPeer, c._thisPeer})
     sleep(1)
-    datastr = 'Hello, World!'
+    with open('test/payload.txt', 'r') as f:
+        datastr = f.read()
     filename = hashlib.sha256(datastr.encode()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(storagedir, filename))
     a.sendDataAdd('127.0.1.1', 8091, datastr)

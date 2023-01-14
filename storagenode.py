@@ -6,6 +6,7 @@ import os
 import socket
 import hashlib
 from enum import Enum
+import tempfile
 
 class StorageNode(Node):
 
@@ -25,7 +26,6 @@ class StorageNode(Node):
 
     def sendDataAdd(self, host, port, data):
         # TODO remove and handle large files
-        assert(len(data) < 4000)
         self._logger.info('sending data add to %s:%s' % (host, port))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,8 +40,15 @@ class StorageNode(Node):
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         self._logger.info('receiving')
-        data = clientSocket.recv(4096).decode()
-        data = data.split(Node.DELIM)[0]
+        # keep recv'ing until data size can be parsed
+        recvBuffer = clientSocket.recv(4096).decode()
+        while (recvBuffer.count(StorageNode.DELIM) < 1):
+            recvBuffer += clientSocket.recv(4096).decode()
+        dataSize = int(recvBuffer.split(Node.DELIM)[0])
+        data = recvBuffer.split(StorageNode.DELIM)[1]
+        # keep reading until dataSize bytes are read
+        while (len(data) < dataSize):
+            data += clientSocket.recv(4096).decode()
         clientSocket.close()
         return data
 
@@ -56,6 +63,7 @@ class StorageNode(Node):
     def _handleDataAdd(self, buffer, connection):
         buffer = buffer.decode()
         # TODO reads entire data into memory, not feasible for very large files, handle
+        # TODO handle binary files
         while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_ADD])):
             buffer += connection.recv(4096).decode()
         dataSize = int(buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_ADD].SIZE.value])
@@ -71,7 +79,7 @@ class StorageNode(Node):
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         with open(os.path.join(self._dataDir, filename), 'r') as f:
             data = f.read()
-        buffer = data + StorageNode.DELIM
+        buffer = StorageNode.DELIM.join([str(len(data)), data]) # no ending delim needed since size field is provided
         connection.send(buffer.encode())
 
     def _handleDataRemove(self, buffer, connection):
