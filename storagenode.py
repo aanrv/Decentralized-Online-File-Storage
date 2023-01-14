@@ -22,24 +22,20 @@ class StorageNode(Node):
         self._dataDir = os.path.expandvars(dataDir)
         os.makedirs(self._dataDir, exist_ok=True)
 
-    def sendDataAdd(self, host, port, data='', filename=''):
+    def sendDataAdd(self, host, port, filename=''):
         self._logger.info('sending data add to %s:%s' % (host, port))
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
-        if data:
-            buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, str(len(data)), data)))
-            clientSocket.send(buffer.encode())
-        else:
-            dataSize = os.path.getsize(filename)
-            buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, dataSize))) + StorageNode.DELIM
-            bytesRemaining = dataSize
-            clientSocket.send(buffer.encode())
-            with open(filename, 'r') as f:
-                while bytesRemaining:
-                    assert(bytesRemaining > 0)
-                    data = f.read(4096)
-                    clientSocket.send(data.encode())
-                    bytesRemaining -= len(data)
+        dataSize = os.path.getsize(filename)
+        buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_ADD.value, dataSize))) + StorageNode.DELIM
+        bytesRemaining = dataSize
+        clientSocket.send(buffer.encode())
+        with open(filename, 'r') as f:
+            while bytesRemaining:
+                assert(bytesRemaining > 0)
+                data = f.read(4096)
+                clientSocket.send(data.encode())
+                bytesRemaining -= len(data)
         clientSocket.close()
 
     def sendDataGet(self, host, port, datahash, targetfile=None):
