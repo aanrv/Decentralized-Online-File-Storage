@@ -8,7 +8,7 @@ import os
 def main():
     storagedir = '$PWD/data/'
     testfile = '$PWD/filetest/enc.file'
-    baseport = 8089
+    baseport = 8080
     a = StorageNode(storagedir, port=baseport)
     b = StorageNode(storagedir, port=baseport+1)
     c = StorageNode(storagedir, port=baseport+2)
@@ -56,9 +56,20 @@ def main():
     assert(d._peers == {a._thisPeer, b._thisPeer, c._thisPeer})
     assert(e._peers == {a._thisPeer, c._thisPeer})
     sleep(1)
+
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(storagedir, filename))
     a.sendDataAdd('127.0.1.1', baseport+2, filename=testfile)
+    sleep(1)
+    assert(os.path.isfile(fullfile))
+    assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
+    a.sendDataRemove('127.0.1.1', baseport+2, filename)
+    sleep(1)
+    assert(not os.path.isfile(fullfile))
+
+    filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
+    fullfile = os.path.expandvars(os.path.join(storagedir, filename))
+    a.sendDataAdd('127.0.1.1', baseport+2, bytedata=open(os.path.expandvars(testfile), 'rb').read())
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
@@ -73,7 +84,7 @@ def main():
     e.shutdown()
     e.shutdown()
 
-    print('Sucess!')
+    print('Tests passed')
 
 main()
 
