@@ -65,10 +65,12 @@ class Node:
         while len(unvisitedPeers):
             iterationPeers = set()  # other peers discovered from peer list of unvisited nodes
             for newHost, newPort in unvisitedPeers:
-                # TODO set timeout
                 try:
                     self.sendConnect(newHost, newPort)
                     newPeers = self.sendGetPeers(newHost, newPort)
+                except socket.timeout:
+                    self._logger.info('connection with %s:%s timed out' % (newHost, newPort))
+                    pass
                 except:
                     self._logger.info('failed to connect or get peers from %s:%s' % (newHost, newPort))
                     pass
@@ -124,6 +126,7 @@ class Node:
         self._logger.info('requesting peers from %s:%s' % (host, port))
         buffer = str(RequestType.GET_PEERS.value) + Node.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.settimeout(10)
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         recvBuffer = ''
