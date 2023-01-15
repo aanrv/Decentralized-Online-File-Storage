@@ -8,6 +8,7 @@ import hashlib
 from enum import Enum
 import tempfile
 import random
+from cryptography.fernet import Fernet
 
 class StorageNode(Node):
 
@@ -30,16 +31,26 @@ class StorageNode(Node):
         self._fileParts = eval(open(self._filePartsLoader, 'r').read())
         self._logger.info('dataDir %s filePartsLoader %s' % (self._dataDir, self._filePartsLoader))
 
-    def uploadFile(self, filename):
+    def uploadFile(self, filename, encrypt=False):
         filename = os.path.expandvars(filename)
+        basename = os.path.basename(filename)
         self._logger.info('uploading file %s' % filename)
         partSize = 7000
         parts = list()
+        if encrypt:
+            key = Fernet.generate_key()
+            keyfile = os.path.join(self._dataDir, basename) + '.key'
+            open(keyfile, 'w+b').write(key)
+            self._logger.info('IMPORTANT!!! saved key to %s' % keyfile)
+
         with open(filename, 'rb') as f:
             while True:
                 buffer = f.read(partSize)
                 if not buffer:
                     break
+
+                if encrypt:
+                    buffer = Fernet(key).encrypt(buffer)
 
                 for host, port in self._chooseNode():
                     self._logger.debug('sending part to %s:%s' % (host, port))
@@ -49,13 +60,19 @@ class StorageNode(Node):
                 self._logger.debug('sent %s' % filehash)
                 parts.append(filehash)
 
-        basename = os.path.basename(filename)
         self._fileParts[basename] = parts
         open(self._filePartsLoader, 'w').write(repr(self._fileParts))
         self._logger.info('done uploading file %s' % filename)
 
-    def downloadFile(self, basename, outfile):
+    def downloadFile(self, basename, outfile, decrypt=False):
         self._logger.info('downloading %s' % basename)
+        if decrypt:
+            keyfile = os.path.join(self._dataDir, basename + '.key')
+            try:
+                key = open(keyfile, 'rb').read()
+            except FileNotFoundError:
+                self._logger.info('key not found at %s' % keyfile)
+                return
         partsfound = dict()
         # go by host
         for host, port in self._peers:
@@ -76,7 +93,11 @@ class StorageNode(Node):
             with open(outfile, 'w+b') as f:
                 self._logger.info('writing parts to %s' % outfile)
                 for partHash in self._fileParts[basename]:
-                    f.write(open(partsfound[partHash], 'rb').read())
+                    partRead = open(partsfound[partHash], 'rb').read()
+                    if decrypt:
+                        f.write(Fernet(key).decrypt(partRead))
+                    else:
+                        f.write(partRead)
         # remove downloaded parts
         for _, filename in partsfound.items():
             self._logger.debug('removing %s' % filename)

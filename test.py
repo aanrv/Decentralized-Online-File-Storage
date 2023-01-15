@@ -7,8 +7,8 @@ import os
 
 def main():
     storagedir = '$PWD/data/'
-    testfile = '$PWD/filetest/enc.file'
-    baseport = 8080
+    testfile = '$PWD/filetest/order-book'
+    baseport = 8095
     a = StorageNode(os.path.join(storagedir, str(baseport)), port=baseport)
     b = StorageNode(os.path.join(storagedir, str(baseport+1)), port=baseport+1)
     c = StorageNode(os.path.join(storagedir, str(baseport+2)), port=baseport+2)
@@ -88,9 +88,10 @@ def main():
     a.sendDataGet('127.0.1.1', baseport+2, 'fdjgfnjds', recvfile)
 
     print('---------------------------------------------------')
-    a.uploadFile(testfile)
+    recvfile = os.path.expandvars(os.path.join(a.dataDir, filename) + '.recv')
+    a.uploadFile(testfile, encrypt=True)
     sleep(3)
-    a.downloadFile(os.path.basename(testfile), recvfile)
+    a.downloadFile(os.path.basename(testfile), recvfile, decrypt=True)
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(os.path.expandvars(recvfile), 'rb').read())
     os.remove(recvfile)
     sleep(3)
