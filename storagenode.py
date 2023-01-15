@@ -38,6 +38,7 @@ class StorageNode(Node):
                 buffer = f.read(partSize)
                 if not buffer:
                     break
+
                 for host, port in self._chooseNode():
                     self._logger.info('sending part to %s:%s' % (host, port))
                     self.sendDataAdd(host, port, bytedata=buffer)
@@ -213,4 +214,19 @@ class StorageNode(Node):
             os.remove(os.path.join(self._dataDir, filename))
         except FileNotFoundError:
             self._logger.info('nothing to remove')
+
+    @property
+    def peers(self):
+        return self._peers
+
+    @property
+    def dataDir(self):
+        return self._dataDir
+
+    @property
+    def filePartsLoader(self):
+        return self._filePartsLoder
+
+    def storedData(self):
+        return list(filter(os.path.isfile, os.listdir(self._dataDir)))
 
