@@ -28,9 +28,11 @@ class StorageNode(Node):
             with open(self._filePartsLoader, 'w+') as f:
                 f.write(repr(dict()))
         self._fileParts = eval(open(self._filePartsLoader, 'r').read())
+        self._logger.info('dataDir %s filePartsLoader %s' % (self._dataDir, self._filePartsLoader))
 
     def uploadFile(self, filename):
         filename = os.path.expandvars(filename)
+        self._logger.info('uploading file %s' % filename)
         partSize = 7000
         parts = list()
         with open(filename, 'rb') as f:
@@ -40,16 +42,17 @@ class StorageNode(Node):
                     break
 
                 for host, port in self._chooseNode():
-                    self._logger.info('sending part to %s:%s' % (host, port))
+                    self._logger.debug('sending part to %s:%s' % (host, port))
                     self.sendDataAdd(host, port, bytedata=buffer)
 
                 filehash = hashlib.sha256(buffer).hexdigest()
-                self._logger.info('sent %s' % filehash)
+                self._logger.debug('sent %s' % filehash)
                 parts.append(filehash)
 
         basename = os.path.basename(filename)
         self._fileParts[basename] = parts
         open(self._filePartsLoader, 'w').write(repr(self._fileParts))
+        self._logger.info('done uploading file %s' % filename)
 
     def downloadFile(self, basename, outfile):
         self._logger.info('downloading %s' % basename)
@@ -58,7 +61,7 @@ class StorageNode(Node):
         for host, port in self._peers:
             # get all files you can from host
             for partHash in set(self._fileParts[basename]) - set(partsfound.keys()):
-                print('looking for %s' % (str(set(self._fileParts[basename]) - set(partsfound.keys()))))
+                self._logger.debug('requesting %s from %s:%s' % (partHash, host, port))
                 recvfile = self.sendDataGet(host, port, partHash)
                 if recvfile:
                     partsfound[partHash] = recvfile
@@ -67,15 +70,16 @@ class StorageNode(Node):
         # confirm all files were found
         if (len(partsfound) != len(self._fileParts[basename])):
             self._logger.info('unable to find all file parts')
-            return
-        # write files sequentially to outfile
-        outfile = os.path.expandvars(outfile)
-        with open(outfile, 'w+b') as f:
-            self._logger.info('writing parts to %s' % outfile)
-            for partHash in self._fileParts[basename]:
-                f.write(open(partsfound[partHash], 'rb').read())
+        else:
+            # write files sequentially to outfile
+            outfile = os.path.expandvars(outfile)
+            with open(outfile, 'w+b') as f:
+                self._logger.info('writing parts to %s' % outfile)
+                for partHash in self._fileParts[basename]:
+                    f.write(open(partsfound[partHash], 'rb').read())
         # remove downloaded parts
         for _, filename in partsfound.items():
+            self._logger.debug('removing %s' % filename)
             os.remove(filename)
 
     def removeFile(self, basename):
@@ -147,7 +151,7 @@ class StorageNode(Node):
         return targetfile
 
     def sendDataRemove(self, host, port, datahash):
-        self._logger.info('sending data remove to %s:%s (%s)' % (host, port, datahash))
+        self._logger.info('sending data remove to %s:%s for %s' % (host, port, datahash))
         buffer = StorageNode.DELIM.join(map(str, (RequestType.DATA_REMOVE.value, datahash))) + StorageNode.DELIM
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
@@ -175,7 +179,6 @@ class StorageNode(Node):
             data = connection.recv(4096)
             totalBytesWritten += tmp.write(data)
             datahash.update(data)
-        print('WRITTEN %s SIZE %s' % (totalBytesWritten, dataSize))
         outfilename = os.path.join(self._dataDir, datahash.hexdigest())
         os.rename(tmp.name, outfilename)
         tmp.close()
@@ -188,7 +191,7 @@ class StorageNode(Node):
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         fullfile = os.path.join(self._dataDir, filename)
         if not os.path.isfile(fullfile):
-            self._logger.debug('failed to find file %s' % fullfile)
+            self._logger.info('failed to find file %s' % fullfile)
             outbuffer = '0' + StorageNode.DELIM
             connection.send(outbuffer.encode())
             return

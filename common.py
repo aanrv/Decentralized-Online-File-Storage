@@ -13,6 +13,7 @@ RequestType = Enum('RequestType', [
     'DATA_REMOVE',  # request remote host to remove data with the provided hash from its storage directory
 ])
 
+# field indices by message type (seperated by a delim)
 Fields = {
         RequestType.PING        : Enum('PingFields',        ['TYPE'],                   start=0),
         RequestType.CONNECT     : Enum('ConnectFields',     ['TYPE', 'HOST', 'PORT'],   start=0),
@@ -23,9 +24,5 @@ Fields = {
         RequestType.DATA_REMOVE : Enum('DataRemoveFields',  ['TYPE', 'HASH'],           start=0),
 }
 
-# request message field indices when split by delim
-# starts with 1 because 0 is always the message type
-
 RequestTypeIndex = 0
-
 
