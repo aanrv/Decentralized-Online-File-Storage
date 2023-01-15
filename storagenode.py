@@ -38,9 +38,9 @@ class StorageNode(Node):
                 buffer = f.read(partSize)
                 if not buffer:
                     break
-                host, port = self._chooseNode()[0]
-                self._logger.info('sending part to %s:%s' % (host, port))
-                self.sendDataAdd(host, port, bytedata=buffer)
+                for host, port in self._chooseNode():
+                    self._logger.info('sending part to %s:%s' % (host, port))
+                    self.sendDataAdd(host, port, bytedata=buffer)
 
                 filehash = hashlib.sha256(buffer).hexdigest()
                 self._logger.info('sent %s' % filehash)
@@ -77,8 +77,14 @@ class StorageNode(Node):
         for _, filename in partsfound.items():
             os.remove(filename)
 
+    def removeFile(self, basename):
+        self._logger.info('removing file %s from network' % basename)
+        for filehash in self._fileParts[basename]:
+            list(map(lambda hp: self.sendDataRemove(hp[0], hp[1], filehash), self._peers))
+        self._fileParts.pop(basename, None)
+
     def _chooseNode(self):
-        return random.sample(self._peers, 1)
+        return random.sample(self._peers, 3)
 
     def sendDataAdd(self, host, port, filename='', bytedata=''):
         self._logger.info('sending data add to %s:%s' % (host, port))
@@ -202,5 +208,9 @@ class StorageNode(Node):
         while (buffer.count(Node.DELIM) != len(Fields[RequestType.DATA_REMOVE])):
             buffer += connection.recv(4096).decode()
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_REMOVE].HASH.value]
-        os.remove(os.path.join(self._dataDir, filename))
+        self._logger.info('removing %s' % filename)
+        try:
+            os.remove(os.path.join(self._dataDir, filename))
+        except FileNotFoundError:
+            self._logger.info('nothing to remove')
 

@@ -87,11 +87,14 @@ def main():
 
     a.sendDataGet('127.0.1.1', baseport+2, 'fdjgfnjds', recvfile)
 
+    print('---------------------------------------------------')
     a.uploadFile(testfile)
     sleep(3)
     a.downloadFile(os.path.basename(testfile), recvfile)
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(os.path.expandvars(recvfile), 'rb').read())
     os.remove(recvfile)
+    sleep(3)
+    a.removeFile(os.path.basename(testfile))
 
     a.shutdown()
     b.shutdown()
