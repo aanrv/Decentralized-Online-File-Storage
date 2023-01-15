@@ -63,8 +63,11 @@ class StorageNode(Node):
         while (recvBuffer.count(DELIM_ENCODED) <= 0):
             recvBuffer += clientSocket.recv(4096)
         dataSize = int(recvBuffer.split(DELIM_ENCODED)[0].decode())
+        if (dataSize == 0):
+            self._logger.info('node does not have data')
+            return
         # have to join after split in case has buffer has DELIM_ENCODED as a byte value
-        data = int(DELIM_ENCODED.join(recvBuffer.split(DELIM_ENCODED)[1:]))
+        data = DELIM_ENCODED.join(recvBuffer.split(DELIM_ENCODED)[1:])
         tmp = tempfile.NamedTemporaryFile(mode='w+b', delete=False)
         totalBytesWritten = 0
         totalBytesWritten += tmp.write(data)
@@ -118,6 +121,12 @@ class StorageNode(Node):
             buffer += connection.recv(4096).decode()
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         fullfile = os.path.join(self._dataDir, filename)
+        if not os.path.isfile(fullfile):
+            self._logger.info('failed to find file %s' % fullfile)
+            outbuffer = '0' + StorageNode.DELIM
+            connection.send(outbuffer.encode())
+            return
+        self._logger.info('found file %s' % fullfile)
         bytesRemaining = os.path.getsize(fullfile)
         outbuffer = str(bytesRemaining) + StorageNode.DELIM
         connection.send(outbuffer.encode())

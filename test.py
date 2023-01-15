@@ -59,23 +59,33 @@ def main():
 
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(storagedir, filename))
+    recvfile = fullfile+'.recv'
     a.sendDataAdd('127.0.1.1', baseport+2, filename=testfile)
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
+    a.sendDataGet('127.0.1.1', baseport+2, filename, recvfile)
+    assert(open(os.path.expandvars(testfile), 'rb').read() == open(recvfile, 'rb').read())
+    os.remove(recvfile)
     a.sendDataRemove('127.0.1.1', baseport+2, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
 
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(storagedir, filename))
+    recvfile = fullfile+'.recv'
     a.sendDataAdd('127.0.1.1', baseport+2, bytedata=open(os.path.expandvars(testfile), 'rb').read())
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
+    a.sendDataGet('127.0.1.1', baseport+2, filename, recvfile)
+    assert(open(os.path.expandvars(testfile), 'rb').read() == open(recvfile, 'rb').read())
+    os.remove(recvfile)
     a.sendDataRemove('127.0.1.1', baseport+2, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
+
+    a.sendDataGet('127.0.1.1', baseport+2, 'fdjgfnjds', recvfile)
 
     a.shutdown()
     b.shutdown()
