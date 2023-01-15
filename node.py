@@ -5,7 +5,7 @@ import sys
 import socket
 from time import sleep
 import logging
-from threading import Thread
+from threading import Thread, Lock
 from enum import Enum
 
 class Node:
@@ -17,6 +17,7 @@ class Node:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s :: %(levelname)8s :: %(name)s :: %(filename)14s:%(lineno)-3s :: %(funcName)-20s() :: %(message)s')
         logging.info('initializing %s:%s' % (host, port))
 
+        self._peersMutex = Lock()
         self._thisPeer = (host, port)
         self._peers = set()
 
@@ -74,11 +75,11 @@ class Node:
                 else:
                     iterationPeers.update(newPeers)
             unvisitedPeers.clear()
-            unvisitedPeers.update(iterationPeers - self._peers - {self.thisPeer})
+            unvisitedPeers.update(iterationPeers - self.peers - {self.thisPeer})
 
     def leaveNetwork(self):
         self._logger.info('leaving network')
-        for targetNode in list(self._peers):
+        for targetNode in list(self.peers):
             self.sendDisconnect(*targetNode)
 
     def sendPing(self, host, port):
@@ -99,8 +100,7 @@ class Node:
         clientSocket.connect((host, port))
         clientSocket.send(buffer.encode())
         clientSocket.close()
-        # TODO mutex for self._peers
-        self._peers.add((host, port))
+        self.peers.add((host, port))
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendDisconnect(self, host, port):
@@ -114,7 +114,7 @@ class Node:
         clientSocket.send(buffer.encode())
         clientSocket.close()
         try:
-            self._peers.remove((host, port))
+            self.peers.remove((host, port))
         except KeyError:
             self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
 
@@ -150,7 +150,7 @@ class Node:
         headbuffer = buffer[:len(str(len(RequestType))) + 1].decode()   # to decode only portion needed for determining message type
         incomingRequestType = RequestType(int(headbuffer.split(Node.DELIM)[RequestTypeIndex]))
         self._logger.info('received incoming request %s' % incomingRequestType)
-        self._handlers[incomingRequestType](buffer, connection)
+        self.handlers[incomingRequestType](buffer, connection)
         connection.close()
 
     def _handleConnect(self, buffer, connection):
@@ -159,7 +159,7 @@ class Node:
             buffer += connection.recv(4096).decode()
         host = buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].HOST.value]
         port = int(buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].PORT.value])
-        self._peers.add((host, port))
+        self.peers.add((host, port))
         self._logger.info('received connect from %s:%s' % (host, port))
 
     def _handleDisconnect(self, buffer, connection):
@@ -169,16 +169,25 @@ class Node:
         host = buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].HOST.value]
         port = int(buffer.split(Node.DELIM)[Fields[RequestType.DISCONNECT].PORT.value])
         try:
-            self._peers.remove((host, port))
+            self.peers.remove((host, port))
         except KeyError:
             self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
         self._logger.info('recieved disconnect from %s:%s' % (host, port))
 
     def _handleGetPeers(self, _, connection):
-        buffer = repr(self._peers) + Node.DELIM
+        buffer = repr(self.peers) + Node.DELIM
         connection.send(buffer.encode())
 
     @property
     def thisPeer(self):
         return self._thisPeer
+
+    @property
+    def peers(self):
+        with self._peersMutex:
+            return self._peers
+
+    @property
+    def handlers(self):
+        return self._handlers
 

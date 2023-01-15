@@ -240,10 +240,6 @@ class StorageNode(Node):
             self._logger.info('nothing to remove')
 
     @property
-    def peers(self):
-        return self._peers
-
-    @property
     def dataDir(self):
         return self._dataDir
 
