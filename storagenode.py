@@ -7,6 +7,7 @@ import socket
 import hashlib
 from enum import Enum
 import tempfile
+import random
 
 class StorageNode(Node):
 
@@ -21,6 +22,63 @@ class StorageNode(Node):
 
         self._dataDir = os.path.expandvars(dataDir)
         os.makedirs(self._dataDir, exist_ok=True)
+
+        self._filePartsLoader = os.path.join(self._dataDir, '.filePartsLoader')
+        if not os.path.isfile(self._filePartsLoader):
+            with open(self._filePartsLoader, 'w+') as f:
+                f.write(repr(dict()))
+        self._fileParts = eval(open(self._filePartsLoader, 'r').read())
+
+    def uploadFile(self, filename):
+        filename = os.path.expandvars(filename)
+        partSize = 7000
+        parts = list()
+        with open(filename, 'rb') as f:
+            while True:
+                buffer = f.read(partSize)
+                if not buffer:
+                    break
+                host, port = self._chooseNode()[0]
+                self._logger.info('sending part to %s:%s' % (host, port))
+                self.sendDataAdd(host, port, bytedata=buffer)
+
+                filehash = hashlib.sha256(buffer).hexdigest()
+                self._logger.info('sent %s' % filehash)
+                parts.append(filehash)
+
+        basename = os.path.basename(filename)
+        self._fileParts[basename] = parts
+        open(self._filePartsLoader, 'w').write(repr(self._fileParts))
+
+    def downloadFile(self, basename, outfile):
+        self._logger.info('downloading %s' % basename)
+        partsfound = dict()
+        # go by host
+        for host, port in self._peers:
+            # get all files you can from host
+            for partHash in set(self._fileParts[basename]) - set(partsfound.keys()):
+                print('looking for %s' % (str(set(self._fileParts[basename]) - set(partsfound.keys()))))
+                recvfile = self.sendDataGet(host, port, partHash)
+                if recvfile:
+                    partsfound[partHash] = recvfile
+                    self._logger.info('found %s' % partHash)
+
+        # confirm all files were found
+        if (len(partsfound) != len(self._fileParts[basename])):
+            self._logger.info('unable to find all file parts')
+            return
+        # write files sequentially to outfile
+        outfile = os.path.expandvars(outfile)
+        with open(outfile, 'w+b') as f:
+            self._logger.info('writing parts to %s' % outfile)
+            for partHash in self._fileParts[basename]:
+                f.write(open(partsfound[partHash], 'rb').read())
+        # remove downloaded parts
+        for _, filename in partsfound.items():
+            os.remove(filename)
+
+    def _chooseNode(self):
+        return random.sample(self._peers, 1)
 
     def sendDataAdd(self, host, port, filename='', bytedata=''):
         self._logger.info('sending data add to %s:%s' % (host, port))
@@ -64,8 +122,8 @@ class StorageNode(Node):
             recvBuffer += clientSocket.recv(4096)
         dataSize = int(recvBuffer.split(DELIM_ENCODED)[0].decode())
         if (dataSize == 0):
-            self._logger.info('node does not have data')
-            return
+            self._logger.debug('node does not have data')
+            return None
         # have to join after split in case has buffer has DELIM_ENCODED as a byte value
         data = DELIM_ENCODED.join(recvBuffer.split(DELIM_ENCODED)[1:])
         tmp = tempfile.NamedTemporaryFile(mode='w+b', delete=False)
@@ -79,6 +137,7 @@ class StorageNode(Node):
         os.rename(tmp.name, targetfile)
         tmp.close()
         clientSocket.close()
+        return targetfile
 
     def sendDataRemove(self, host, port, datahash):
         self._logger.info('sending data remove to %s:%s (%s)' % (host, port, datahash))
@@ -122,7 +181,7 @@ class StorageNode(Node):
         filename = buffer.split(StorageNode.DELIM)[Fields[RequestType.DATA_GET].HASH.value]
         fullfile = os.path.join(self._dataDir, filename)
         if not os.path.isfile(fullfile):
-            self._logger.info('failed to find file %s' % fullfile)
+            self._logger.debug('failed to find file %s' % fullfile)
             outbuffer = '0' + StorageNode.DELIM
             connection.send(outbuffer.encode())
             return
