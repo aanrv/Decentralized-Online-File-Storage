@@ -9,11 +9,11 @@ def main():
     storagedir = '$PWD/data/'
     testfile = '$PWD/filetest/enc.file'
     baseport = 8080
-    a = StorageNode(storagedir, port=baseport)
-    b = StorageNode(storagedir, port=baseport+1)
-    c = StorageNode(storagedir, port=baseport+2)
-    d = StorageNode(storagedir, port=baseport+3)
-    e = StorageNode(storagedir, port=baseport+4)
+    a = StorageNode(os.path.join(storagedir, str(baseport)), port=baseport)
+    b = StorageNode(os.path.join(storagedir, str(baseport+1)), port=baseport+1)
+    c = StorageNode(os.path.join(storagedir, str(baseport+2)), port=baseport+2)
+    d = StorageNode(os.path.join(storagedir, str(baseport+3)), port=baseport+3)
+    e = StorageNode(os.path.join(storagedir, str(baseport+4)), port=baseport+4)
 
     b.sendConnect('127.0.1.1', baseport)
     sleep(1)
@@ -58,7 +58,7 @@ def main():
     sleep(1)
 
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
-    fullfile = os.path.expandvars(os.path.join(storagedir, filename))
+    fullfile = os.path.expandvars(os.path.join(c.dataDir, filename))
     recvfile = fullfile+'.recv'
     a.sendDataAdd('127.0.1.1', baseport+2, filename=testfile)
     sleep(1)
@@ -72,7 +72,7 @@ def main():
     assert(not os.path.isfile(fullfile))
 
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
-    fullfile = os.path.expandvars(os.path.join(storagedir, filename))
+    fullfile = os.path.expandvars(os.path.join(c.dataDir, filename))
     recvfile = fullfile+'.recv'
     a.sendDataAdd('127.0.1.1', baseport+2, bytedata=open(os.path.expandvars(testfile), 'rb').read())
     sleep(1)
