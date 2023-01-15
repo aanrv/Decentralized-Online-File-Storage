@@ -49,7 +49,7 @@ class Node:
         self._handleIncomingContinue = False
         sleep(1)
         try:
-            self.sendPing(*self._thisPeer)  # a hack to move the loop forward in case no other nodes are connecting
+            self.sendPing(*self.thisPeer)  # a hack to move the loop forward in case no other nodes are connecting
         except:
             pass
         self._serverThread.join()
@@ -57,7 +57,7 @@ class Node:
         self._logger.info('shutdown complete')
 
     def joinNetwork(self, host, port):
-        if ((host, port) == self._thisPeer):
+        if ((host, port) == self.thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('joining network through %s:%s' % (host, port))
         unvisitedPeers = {(host, port)}
@@ -74,7 +74,7 @@ class Node:
                 else:
                     iterationPeers.update(newPeers)
             unvisitedPeers.clear()
-            unvisitedPeers.update(iterationPeers - self._peers - {self._thisPeer})
+            unvisitedPeers.update(iterationPeers - self._peers - {self.thisPeer})
 
     def leaveNetwork(self):
         self._logger.info('leaving network')
@@ -90,7 +90,7 @@ class Node:
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendConnect(self, host, port):
-        if ((host, port) == self._thisPeer):
+        if ((host, port) == self.thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('connecting to %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (RequestType.CONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
@@ -104,7 +104,7 @@ class Node:
 
     # connect to a single node i.e. request host:port node adds self to its peer list
     def sendDisconnect(self, host, port):
-        if ((host, port) == self._thisPeer):
+        if ((host, port) == self.thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('disconnecting from %s:%s' % (host, port))
         buffer = Node.DELIM.join(map(str, (RequestType.DISCONNECT.value, *self._serverSocket.getsockname()))) + Node.DELIM
@@ -119,7 +119,7 @@ class Node:
             self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
 
     def sendGetPeers(self, host, port):
-        if ((host, port) == self._thisPeer):
+        if ((host, port) == self.thisPeer):
             raise Exception('attempted to contact self host')
         self._logger.info('requesting peers from %s:%s' % (host, port))
         buffer = str(RequestType.GET_PEERS.value) + Node.DELIM
@@ -177,4 +177,8 @@ class Node:
     def _handleGetPeers(self, _, connection):
         buffer = repr(self._peers) + Node.DELIM
         connection.send(buffer.encode())
+
+    @property
+    def thisPeer(self):
+        return self._thisPeer
 
