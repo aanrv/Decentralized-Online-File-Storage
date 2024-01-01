@@ -4,10 +4,12 @@ from storagenode import *
 from time import sleep
 import hashlib
 import os
+import socket
 
 def main():
     storagedir = '$PWD/data/'
     testfile = '$PWD/filetest/order-book'
+    host = socket.gethostbyname(socket.gethostname())
     baseport = 8095
     a = StorageNode(os.path.join(storagedir, str(baseport)), port=baseport)
     b = StorageNode(os.path.join(storagedir, str(baseport+1)), port=baseport+1)
@@ -15,21 +17,21 @@ def main():
     d = StorageNode(os.path.join(storagedir, str(baseport+3)), port=baseport+3)
     e = StorageNode(os.path.join(storagedir, str(baseport+4)), port=baseport+4)
 
-    b.sendConnect('127.0.1.1', baseport)
+    b.sendConnect(host, baseport)
     sleep(1)
     assert(a.peers == {b.thisPeer})
     assert(b.peers == {a.thisPeer})
-    c.joinNetwork('127.0.1.1', baseport+1)
+    c.joinNetwork(host, baseport+1)
     sleep(1)
     assert(a.peers == {b.thisPeer, c.thisPeer})
     assert(b.peers == {a.thisPeer, c.thisPeer})
     assert(c.peers == {a.thisPeer, b.thisPeer})
-    b.sendDisconnect('127.0.1.1', baseport)
+    b.sendDisconnect(host, baseport)
     sleep(1)
     assert(a.peers == {c.thisPeer})
     assert(b.peers == {c.thisPeer})
     assert(c.peers == {a.thisPeer, b.thisPeer})
-    d.joinNetwork('127.0.1.1', baseport+1)
+    d.joinNetwork(host, baseport+1)
     sleep(1)
     assert(a.peers == {c.thisPeer, d.thisPeer})
     assert(b.peers == {c.thisPeer, d.thisPeer})
@@ -41,15 +43,15 @@ def main():
     assert(b.peers == {d.thisPeer})
     assert(not c.peers)
     assert(d.peers == {a.thisPeer, b.thisPeer})
-    e.joinNetwork('127.0.1.1', baseport+2)
+    e.joinNetwork(host, baseport+2)
     sleep(1)
     assert(e.peers == {c.thisPeer})
     assert(c.peers == {e.thisPeer})
-    e.sendConnect('127.0.1.1', baseport)
+    e.sendConnect(host, baseport)
     sleep(1)
     assert(e.peers == {a.thisPeer, c.thisPeer})
     assert(a.peers == {d.thisPeer, e.thisPeer})
-    c.joinNetwork('127.0.1.1', baseport+4)
+    c.joinNetwork(host, baseport+4)
     assert(a.peers == {c.thisPeer, d.thisPeer, e.thisPeer})
     assert(b.peers == {c.thisPeer, d.thisPeer})
     assert(c.peers == {a.thisPeer, b.thisPeer, d.thisPeer, e.thisPeer})
@@ -60,32 +62,32 @@ def main():
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(c.dataDir, filename))
     recvfile = fullfile+'.recv'
-    a.sendDataAdd('127.0.1.1', baseport+2, filename=testfile)
+    a.sendDataAdd(host, baseport+2, filename=testfile)
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
-    a.sendDataGet('127.0.1.1', baseport+2, filename, recvfile)
+    a.sendDataGet(host, baseport+2, filename, recvfile)
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(recvfile, 'rb').read())
     os.remove(recvfile)
-    a.sendDataRemove('127.0.1.1', baseport+2, filename)
+    a.sendDataRemove(host, baseport+2, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
 
     filename = hashlib.sha256(open(os.path.expandvars(testfile), 'rb').read()).hexdigest()
     fullfile = os.path.expandvars(os.path.join(c.dataDir, filename))
     recvfile = fullfile+'.recv'
-    a.sendDataAdd('127.0.1.1', baseport+2, bytedata=open(os.path.expandvars(testfile), 'rb').read())
+    a.sendDataAdd(host, baseport+2, bytedata=open(os.path.expandvars(testfile), 'rb').read())
     sleep(1)
     assert(os.path.isfile(fullfile))
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(fullfile, 'rb').read())
-    a.sendDataGet('127.0.1.1', baseport+2, filename, recvfile)
+    a.sendDataGet(host, baseport+2, filename, recvfile)
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(recvfile, 'rb').read())
     os.remove(recvfile)
-    a.sendDataRemove('127.0.1.1', baseport+2, filename)
+    a.sendDataRemove(host, baseport+2, filename)
     sleep(1)
     assert(not os.path.isfile(fullfile))
 
-    a.sendDataGet('127.0.1.1', baseport+2, 'fdjgfnjds', recvfile)
+    a.sendDataGet(host, baseport+2, 'fdjgfnjds', recvfile)
 
     print('---------------------------------------------------')
     recvfile = os.path.expandvars(os.path.join(a.dataDir, filename) + '.recv')
