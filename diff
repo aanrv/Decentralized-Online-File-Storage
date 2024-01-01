@@ -1,0 +1,52 @@
+diff --git a/node.py b/node.py
+index c0de1be..b1550ef 100644
+--- a/node.py
++++ b/node.py
+@@ -141,19 +141,19 @@ class Node:
+         while self._handleIncomingContinue:
+             self._handleIncoming()
+ 
+-    def _handlePing(self, *_):
+-        self._logger.info('received ping')
+-
+     def _handleIncoming(self):
+         connection, address = self._serverSocket.accept()
+         self._logger.info('accepted %s' % str(address))
+-        # TODO create thread per connection
+         buffer = connection.recv(4096)
+         self._logger.info('received buffer')
+         headbuffer = buffer[:len(str(len(RequestType))) + 1].decode()   # to decode only portion needed for determining message type
+         incomingRequestType = RequestType(int(headbuffer.split(Node.DELIM)[RequestTypeIndex]))
+         self._logger.info('received incoming request %s' % incomingRequestType)
+-        self.handlers[incomingRequestType](buffer, connection)
++        handlerThread = Thread(self.handlers[incomingRequestType](buffer, connection))
++        handlerThread.start()
++
++    def _handlePing(self, _, connection):
++        self._logger.info('received ping')
+         connection.close()
+ 
+     def _handleConnect(self, buffer, connection):
+@@ -164,6 +164,7 @@ class Node:
+         port = int(buffer.split(Node.DELIM)[Fields[RequestType.CONNECT].PORT.value])
+         self.peers.add((host, port))
+         self._logger.info('received connect from %s:%s' % (host, port))
++        connection.close()
+ 
+     def _handleDisconnect(self, buffer, connection):
+         buffer = buffer.decode()
+@@ -175,11 +176,14 @@ class Node:
+             self.peers.remove((host, port))
+         except KeyError:
+             self._logger.info('%s:%s not in peers list, nothing to remove' % (host, port))
++            connection.close()
+         self._logger.info('recieved disconnect from %s:%s' % (host, port))
++        connection.close()
+ 
+     def _handleGetPeers(self, _, connection):
+         buffer = repr(self.peers) + Node.DELIM
+         connection.send(buffer.encode())
++        connection.close()
+ 
+     @property
+     def thisPeer(self):
