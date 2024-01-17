@@ -23,6 +23,20 @@ The API is very straightforward:
 - `StorageNode.downloadFile(filename, decrypt=False)`
 - `StorageNode.removeFile(filename)`
 
+# Test
+
+1) Set `testfile` variable in `test.py` to any file of your choice.
+2) Run `test.py`. This file simulates a peer-to-peer network and `StorageNode` interactions. This is simply initial testing, `unittest` is surely very high on my todo list.
+
+The downloaded file's contents can also be manually verified, for example:
+
+```
+aanrv@aanrv-virtual-machine:~/Documents/Decentralized-Online-File-Storage$ find data -type f -name *recv | xargs sha256sum debian-12.4.0-amd64-netinst.iso 
+64d727dd5785ae5fcfd3ae8ffbede5f40cca96f1580aaa2820e8b99dae989d94  debian-12.4.0-amd64-netinst.iso
+64d727dd5785ae5fcfd3ae8ffbede5f40cca96f1580aaa2820e8b99dae989d94  data/8095/64d727dd5785ae5fcfd3ae8ffbede5f40cca96f1580aaa2820e8b99dae989d94.recv
+```
+(If `os.remove(recvfile)` is commented out in `test.py`, the downloaded file will persist in `data/<port>/<filehash>.recv`.)
+
 # Basic Overview
 
 - joining the network
