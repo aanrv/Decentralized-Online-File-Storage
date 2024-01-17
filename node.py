@@ -13,6 +13,7 @@ class Node:
 
     Contains functionality to join the network, connect/disconnect to/from specific nodes, handle incoming transmissions, and maintain a list of peers on the network.
 
+    DELIM:          delimiter for message fields when sending buffer on socket connection
     _logger:        class logger
     _peers:         set of addresses (host,port tuple) to other peer Nodes in network
     _thisPeer:      tuple of self Node's host and port
