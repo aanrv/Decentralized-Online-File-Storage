@@ -8,8 +8,9 @@ import socket
 
 def main():
     storagedir = '$PWD/data/'
-    testfile = '$PWD/filetest/order-book'
+    testfile = '$PWD/debian-12.4.0-amd64-netinst.iso'
     host = socket.gethostbyname(socket.gethostname())
+    # change baseport if test start fails, likely due to previous test socket not completely shutdown by system
     baseport = 8095
     a = StorageNode(os.path.join(storagedir, str(baseport)), port=baseport)
     b = StorageNode(os.path.join(storagedir, str(baseport+1)), port=baseport+1)
@@ -95,7 +96,7 @@ def main():
     sleep(3)
     a.downloadFile(os.path.basename(testfile), recvfile, decrypt=True)
     assert(open(os.path.expandvars(testfile), 'rb').read() == open(os.path.expandvars(recvfile), 'rb').read())
-    os.remove(recvfile)
+    #os.remove(recvfile)
     sleep(3)
     a.removeFile(os.path.basename(testfile))
 
